@@ -44,9 +44,9 @@ The design deliberately separates **prediction**, **execution**, and **risk**. T
 
 Each option is a binary event contract:
 
-$$
-X = \mathbf{1}\left\{\sum_i w_i S_i(T) \ge K\right\}
-$$
+```math
+X = \mathbf{1}\!\left[\sum_i w_i S_i(T) \ge K\right]
+```
 
 where:
 
@@ -57,15 +57,15 @@ where:
 
 Ignoring discounting, the fair value is therefore
 
-$$
+```math
 V = \mathbb{E}[X]
-$$
+```
 
 and because $X$ is binary,
 
-$$
-V = \Pr\left(\sum_i w_i S_i(T) \ge K\right).
-$$
+```math
+V = \Pr\!\left(\sum_i w_i S_i(T) \ge K\right).
+```
 
 So pricing becomes a probability problem: estimate the probability that the terminal weighted basket finishes above the strike.
 
@@ -87,41 +87,41 @@ From the observed rate history, the bot estimates:
 
 At current rate $r_t$, define the mean-reversion tilt
 
-$$
+```math
 \tau_t = \kappa(r^* - r_t).
-$$
+```
 
 The transition probabilities are then
 
-$$
+```math
 p_{\uparrow}(r_t) = \mathrm{clip}(u_0 + \tau_t),
-$$
+```
 
-$$
+```math
 p_{\downarrow}(r_t) = \mathrm{clip}(d_0 - \tau_t),
-$$
+```
 
 and
 
-$$
+```math
 p_0(r_t) = 1 - p_{\uparrow}(r_t) - p_{\downarrow}(r_t).
-$$
+```
 
 The parameters are fitted by maximising the log-likelihood of the observed up/down/stay transitions using a constrained coordinate search.
 
 The terminal rate distribution is then propagated exactly through dynamic programming. From any current state $r$:
 
-$$
-P_{t+1}(r+\Delta r) \leftarrow P_{t+1}(r+\Delta r) + P_t(r)p_{\uparrow}(r),
-$$
+```math
+P_{t+1}(r+\Delta r) = P_{t+1}(r+\Delta r) + P_t(r)p_{\uparrow}(r),
+```
 
-$$
-P_{t+1}(r-\Delta r) \leftarrow P_{t+1}(r-\Delta r) + P_t(r)p_{\downarrow}(r),
-$$
+```math
+P_{t+1}(r-\Delta r) = P_{t+1}(r-\Delta r) + P_t(r)p_{\downarrow}(r),
+```
 
-$$
-P_{t+1}(r) \leftarrow P_{t+1}(r) + P_t(r)p_0(r).
-$$
+```math
+P_{t+1}(r) = P_{t+1}(r) + P_t(r)p_0(r).
+```
 
 This gives an exact discrete terminal-rate distribution without Monte Carlo noise.
 
@@ -129,19 +129,19 @@ This gives an exact discrete terminal-rate distribution without Monte Carlo nois
 
 For each company, one-period log returns are modelled as
 
-$$
-\log\left(\frac{S_{t+1}}{S_t}\right)
+```math
+\log\!\left(\frac{S_{t+1}}{S_t}\right)
 = \alpha + \beta\,\Delta r_t + \varepsilon_t.
-$$
+```
 
 The drift $\alpha$ and rate sensitivity $\beta$ are estimated using ordinary least squares.
 
 Over $T$ periods, conditional on the terminal rate, the model is approximately
 
-$$
+```math
 \log S_T
 \approx \log S_0 + T\alpha + \beta(r_T-r_0) + \text{noise}.
-$$
+```
 
 Therefore each company is conditionally lognormal.
 
@@ -149,23 +149,23 @@ Therefore each company is conditionally lognormal.
 
 The AJR and THR regression residuals are not assumed independent. Their covariance matrix is estimated as
 
-$$
+```math
 \Sigma =
 \begin{pmatrix}
 \sigma_A^2 & \sigma_{AT} \\
 \sigma_{AT} & \sigma_T^2
 \end{pmatrix}.
-$$
+```
 
 The code represents this through a shared sector factor plus idiosyncratic shocks:
 
-$$
+```math
 \varepsilon_A = b_A Z_s + \sigma_{A,\mathrm{id}}Z_A,
-$$
+```
 
-$$
+```math
 \varepsilon_T = b_T Z_s + \sigma_{T,\mathrm{id}}Z_T.
-$$
+```
 
 This reproduces the estimated variances and covariance while keeping the pricing calculation tractable.
 
@@ -177,32 +177,32 @@ A weak variance prior is included for very small samples so that a short warm-up
 
 For every possible terminal rate $r$, the model calculates
 
-$$
+```math
 P(R_T=r).
-$$
+```
 
 The option value is then obtained by conditioning on the terminal rate:
 
-$$
+```math
 V
 = \sum_r P(R_T=r)
-\Pr\left(\sum_i w_iS_i(T) \ge K \mid R_T=r\right).
-$$
+\Pr\!\left(\sum_i w_iS_i(T) \ge K \mid R_T=r\right).
+```
 
 ### 3.1 Single-Company Contracts
 
 If
 
-$$
+```math
 \log S_T \sim N(\mu,\sigma^2),
-$$
+```
 
 then for a positive weight $w$,
 
-$$
+```math
 \Pr(wS_T \ge K)
-= 1 - \Phi\left(\frac{\log(K/w)-\mu}{\sigma}\right).
-$$
+= 1 - \Phi\!\left(\frac{\log(K/w)-\mu}{\sigma}\right).
+```
 
 The implementation evaluates this using the complementary error function.
 
@@ -212,10 +212,10 @@ A weighted sum of correlated lognormal variables generally has no simple closed-
 
 Instead of running a large Monte Carlo simulation for every quote, the bot conditions on one Gaussian factor. If $Z_A$ and $Z_T$ are correlated standard normals, then
 
-$$
+```math
 Z_T \mid Z_A=z
 \sim N(\rho z, 1-\rho^2).
-$$
+```
 
 This reduces the two-dimensional problem to a one-dimensional numerical expectation. The code evaluates it using deterministic normal quantile points:
 
@@ -239,33 +239,23 @@ A single fitted parameter set can be overconfident, especially with limited data
 
 For each plus/minus perturbation pair, the option is repriced. The local pricing uncertainty is approximated by
 
-$$
+```math
 \widehat{\sigma}_V^2
 = \sum_j
 \left(\frac{V_j^+ - V_j^-}{2}\right)^2.
-$$
+```
 
 The conservative pricing interval is then approximately
 
-$$
-V^- = \max\left(0, V - z\widehat{\sigma}_V - c\right),
-$$
+```math
+V^- = \max\!\left(0, V - z\widehat{\sigma}_V - c\right),
+```
 
-$$
-V^+ = \min\left(1, V + z\widehat{\sigma}_V + c\right),
-$$
+```math
+V^+ = \min\!\left(1, V + z\widehat{\sigma}_V + c\right),
+```
 
-with
-
-$$
-z = 1.645
-$$
-
-and a small numerical allowance
-
-$$
-c = 0.003.
-$$
+with $z=1.645$ and a small numerical allowance $c=0.003$.
 
 The bot uses the conservative side of this interval when deciding whether a quote has enough edge.
 
@@ -279,16 +269,16 @@ The strategy models each RFQ as an auction against an unknown effective rival qu
 
 A quote is competitive when approximately
 
-$$
+```math
 C \ge d.
-$$
+```
 
 The fill probability is therefore the posterior survival probability
 
-$$
+```math
 P(\text{fill at distance }d)
 = P(C \ge d \mid \text{observations}).
-$$
+```
 
 ### 5.1 Bayesian Updating from Fills and Misses
 
@@ -296,10 +286,10 @@ The initial prior over $C$ is geometric, representing a rapidly decreasing chanc
 
 After a fill or miss, incompatible cutoff states are removed and the remaining mass is renormalised:
 
-$$
+```math
 P(C=c \mid O)
 \propto P(O \mid C=c)P(C=c).
-$$
+```
 
 The bid and ask sides maintain **separate posterior distributions**. This is the core reason for the *Pipeline-Asymmetric* name: buy-side and sell-side competition need not be identical.
 
@@ -309,12 +299,12 @@ If neither side of a two-sided quote fills, the bot does not directly observe wh
 
 It therefore uses a soft responsibility weight. Conceptually,
 
-$$
+```math
 \gamma
 =
 \frac{P(\text{sell})P(\text{bid miss}\mid\text{sell})}
 {P(\text{sell})P(\text{bid miss}) + P(\text{buy})P(\text{ask miss})}.
-$$
+```
 
 The bid-side posterior receives weight $\gamma$ and the ask-side posterior receives weight $1-\gamma$.
 
@@ -336,10 +326,10 @@ For each candidate price $x$, it evaluates:
 
 The basic objective is
 
-$$
+```math
 \mathrm{score}(x)
 = P(\mathrm{fill}\mid x)\times \Delta U(x,q^*).
-$$
+```
 
 This explicitly trades off **profit per fill** against **probability of getting filled**.
 
@@ -362,25 +352,25 @@ Suppose terminal state $s$ has:
 
 Then terminal wealth becomes
 
-$$
+```math
 W_s'(q) = W_s + qa(X_s-x).
-$$
+```
 
 The strategy chooses $q$ to maximise
 
-$$
+```math
 \Delta U(q)
 = \sum_s p_s
-\log\left(\frac{W_s'(q)}{W_s}\right).
-$$
+\log\!\left(\frac{W_s'(q)}{W_s}\right).
+```
 
 Equivalently,
 
-$$
+```math
 \Delta U(q)
 = \sum_s p_s
-\log\left(1+\frac{qa(X_s-x)}{W_s}\right).
-$$
+\log\!\left(1+\frac{qa(X_s-x)}{W_s}\right).
+```
 
 Log utility rewards positive edge while strongly penalising trades that put too much capital at risk.
 
@@ -388,9 +378,9 @@ Log utility rewards positive edge while strongly penalising trades that put too 
 
 Expected log utility is only defined if terminal wealth remains positive in every state with non-zero probability:
 
-$$
+```math
 W_s + qa(X_s-x) > 0.
-$$
+```
 
 The implementation calculates the maximum integer quantity satisfying these pathwise inequalities before attempting optimisation.
 
@@ -400,13 +390,13 @@ For a simple two-state binary event, the continuous first-order condition has a 
 
 For a more general portfolio state representation,
 
-$$
+```math
 \frac{d\Delta U}{dq}
 =
 \sum_s
 p_s
 \frac{a(X_s-x)}{W_s+qa(X_s-x)}.
-$$
+```
 
 Because expected log utility is concave, this derivative is monotone. The program therefore locates the sign change with binary search on the integer quantity lattice rather than checking every possible size.
 
@@ -418,35 +408,35 @@ Options with proportional leg vectors and the same expiry are nested events.
 
 For strikes
 
-$$
+```math
 k_1 < k_2 < \cdots < k_m,
-$$
+```
 
 the contracts can be written as
 
-$$
-X_i = \mathbf{1}\{Y \ge k_i\}.
-$$
+```math
+X_i = \mathbf{1}\!\left[Y \ge k_i\right].
+```
 
 If
 
-$$
+```math
 p_i = P(Y \ge k_i),
-$$
+```
 
 then the full joint distribution follows directly from the marginals:
 
-$$
+```math
 P(Y<k_1)=1-p_1,
-$$
+```
 
-$$
+```math
 P(k_i\le Y<k_{i+1})=p_i-p_{i+1},
-$$
+```
 
-$$
+```math
 P(Y\ge k_m)=p_m.
-$$
+```
 
 This lets the bot construct exact terminal portfolio-wealth states for an entire strike ladder without incorrectly assuming that those contracts are independent.
 
@@ -458,21 +448,21 @@ It also allows a lower-strike long and a higher-strike short to receive the corr
 
 For a long binary bought at price $x$, maximum loss per unit is
 
-$$
+```math
 L_{\mathrm{long}} = x.
-$$
+```
 
 For a short binary sold at price $x$, maximum loss per unit is
 
-$$
+```math
 L_{\mathrm{short}} = 1-x.
-$$
+```
 
 For quantity $q$, the raw collateral requirement is therefore
 
-$$
+```math
 D = qL.
-$$
+```
 
 The bot keeps a separate reservation ledger for outstanding quotes and accepted FOK orders so that multiple simultaneous fills cannot accidentally commit more capital than is available.
 
@@ -480,17 +470,17 @@ The bot keeps a separate reservation ledger for outstanding quotes and accepted 
 
 Suppose the portfolio holds $L$ long contracts and $S$ short contracts on the same binary event. At expiry, total payoff is
 
-$$
+```math
 LX + S(1-X),
-$$
+```
 
 where $X\in\{0,1\}$.
 
 The minimum possible payoff is
 
-$$
+```math
 \min(L,S).
-$$
+```
 
 This is a pathwise guaranteed credit, not an expected-value approximation. The bot uses it when assessing solvency and collateral requirements.
 
@@ -556,12 +546,12 @@ The project connected several ideas that are often studied separately:
 
 The broader trading lesson was that fair value is only one component of a market maker. The final decision combines
 
-$$
+```math
 \text{prediction}
 + \text{execution probability}
 + \text{portfolio risk}
 + \text{capital constraints}.
-$$
+```
 
 ---
 
